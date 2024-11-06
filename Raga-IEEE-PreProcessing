@@ -1,0 +1,1048 @@
+{
+ "cells": [
+  {
+   "cell_type": "code",
+   "execution_count": 1,
+   "id": "88c02934",
+   "metadata": {
+    "_cell_guid": "4bde910a-05d4-4a9b-9697-9b8caa053862",
+    "_uuid": "b302432e-a072-49f2-a8e1-f2dfa32aeb9d",
+    "collapsed": false,
+    "execution": {
+     "iopub.execute_input": "2024-11-06T19:18:51.688079Z",
+     "iopub.status.busy": "2024-11-06T19:18:51.687080Z",
+     "iopub.status.idle": "2024-11-06T19:19:21.084603Z",
+     "shell.execute_reply": "2024-11-06T19:19:21.083267Z"
+    },
+    "jupyter": {
+     "outputs_hidden": false
+    },
+    "papermill": {
+     "duration": 29.407592,
+     "end_time": "2024-11-06T19:19:21.087627",
+     "exception": false,
+     "start_time": "2024-11-06T19:18:51.680035",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "outputs": [],
+   "source": [
+    "#pip installs\n",
+    "!pip3 install -q ipython-autotime\n",
+    "!pip3 install h5py -q\n",
+    "!mkdir /kaggle/tmp"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 2,
+   "id": "2cbf39ae",
+   "metadata": {
+    "_cell_guid": "d4f7c302-655b-435e-b994-f0eb25e7ce70",
+    "_uuid": "96e2e872-c57a-4439-afc3-b8fadc76f35b",
+    "collapsed": false,
+    "execution": {
+     "iopub.execute_input": "2024-11-06T19:19:21.099507Z",
+     "iopub.status.busy": "2024-11-06T19:19:21.099068Z",
+     "iopub.status.idle": "2024-11-06T19:19:26.823084Z",
+     "shell.execute_reply": "2024-11-06T19:19:26.821910Z"
+    },
+    "jupyter": {
+     "outputs_hidden": false
+    },
+    "papermill": {
+     "duration": 5.732658,
+     "end_time": "2024-11-06T19:19:26.825666",
+     "exception": false,
+     "start_time": "2024-11-06T19:19:21.093008",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "time: 5.71 s (started: 2024-11-06 19:19:21 +00:00)\n"
+     ]
+    }
+   ],
+   "source": [
+    "%reload_ext autotime\n",
+    "import numpy as np\n",
+    "from pathlib import Path\n",
+    "import librosa\n",
+    "import h5py\n",
+    "import gc\n",
+    "from sklearn.preprocessing import LabelEncoder, OneHotEncoder\n",
+    "import torch\n",
+    "import torchaudio\n",
+    "from tqdm.notebook import tqdm"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 3,
+   "id": "b421735a",
+   "metadata": {
+    "_cell_guid": "116a421c-d6ba-44c1-8f19-654cb8e8e48f",
+    "_uuid": "bbb7fa97-d26a-471f-a558-1b87c4fca63d",
+    "collapsed": false,
+    "execution": {
+     "iopub.execute_input": "2024-11-06T19:19:26.837847Z",
+     "iopub.status.busy": "2024-11-06T19:19:26.836928Z",
+     "iopub.status.idle": "2024-11-06T19:19:26.843305Z",
+     "shell.execute_reply": "2024-11-06T19:19:26.842290Z"
+    },
+    "jupyter": {
+     "outputs_hidden": false
+    },
+    "papermill": {
+     "duration": 0.015096,
+     "end_time": "2024-11-06T19:19:26.845789",
+     "exception": false,
+     "start_time": "2024-11-06T19:19:26.830693",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "time: 782 µs (started: 2024-11-06 19:19:26 +00:00)\n"
+     ]
+    }
+   ],
+   "source": [
+    "base_path = Path('/kaggle/input/thaat-and-raga-forest-dataset-ieee/Thaat and Raga Forest (TRF) Dataset')\n",
+    "output_file='/kaggle/working/processed_spectrograms.h5'\n",
+    "\n",
+    "chunk_duration = 8.18\n",
+    "sampling_rate = 16000\n",
+    "chunk_samples = int(chunk_duration * sampling_rate)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 4,
+   "id": "161cc677",
+   "metadata": {
+    "_cell_guid": "b0658cbe-e319-4946-a0d1-86f654f3c565",
+    "_uuid": "d80c5ed6-94df-419d-ae6b-b18a02fd5f2e",
+    "collapsed": false,
+    "execution": {
+     "iopub.execute_input": "2024-11-06T19:19:26.857265Z",
+     "iopub.status.busy": "2024-11-06T19:19:26.856869Z",
+     "iopub.status.idle": "2024-11-06T19:19:27.647388Z",
+     "shell.execute_reply": "2024-11-06T19:19:27.646158Z"
+    },
+    "jupyter": {
+     "outputs_hidden": false
+    },
+    "papermill": {
+     "duration": 0.799008,
+     "end_time": "2024-11-06T19:19:27.649807",
+     "exception": false,
+     "start_time": "2024-11-06T19:19:26.850799",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "1103\n",
+      "time: 785 ms (started: 2024-11-06 19:19:26 +00:00)\n"
+     ]
+    }
+   ],
+   "source": [
+    "total_files = 0\n",
+    "for thaat in base_path.iterdir():\n",
+    "    if thaat.is_dir():\n",
+    "        for raga in thaat.iterdir():\n",
+    "            if raga.is_dir():\n",
+    "                total_files += len(list(raga.glob('*')))\n",
+    "print(total_files)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 5,
+   "id": "9028806e",
+   "metadata": {
+    "_cell_guid": "23e30e7c-e6ce-42be-b445-74f62906a4ea",
+    "_uuid": "c3d88f48-c173-49c2-9138-7c92368d807e",
+    "collapsed": false,
+    "execution": {
+     "iopub.execute_input": "2024-11-06T19:19:27.661919Z",
+     "iopub.status.busy": "2024-11-06T19:19:27.661186Z",
+     "iopub.status.idle": "2024-11-06T19:19:27.671281Z",
+     "shell.execute_reply": "2024-11-06T19:19:27.670238Z"
+    },
+    "jupyter": {
+     "outputs_hidden": false
+    },
+    "papermill": {
+     "duration": 0.01928,
+     "end_time": "2024-11-06T19:19:27.674137",
+     "exception": false,
+     "start_time": "2024-11-06T19:19:27.654857",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "time: 1.92 ms (started: 2024-11-06 19:19:27 +00:00)\n"
+     ]
+    }
+   ],
+   "source": [
+    "def generate_spectrogram(audio_clip, n_mels=256, n_fft = 2048, hop_length= 512, device='cuda'):\n",
+    "    audio_tensor = torch.tensor(audio_clip, device=device)\n",
+    "    # Generate mel spectrogram\n",
+    "    mel_transform = torchaudio.transforms.MelSpectrogram(\n",
+    "        sample_rate = sampling_rate,\n",
+    "        n_fft = n_fft,\n",
+    "        hop_length = hop_length,\n",
+    "        n_mels = n_mels\n",
+    "    ).to(device)\n",
+    "    \n",
+    "    mel_spect = mel_transform(audio_tensor).detach()\n",
+    "    torch.cuda.empty_cache()\n",
+    "#     mel_spect = librosa.feature.melspectrogram(\n",
+    "#         y=audio_clip,\n",
+    "#         n_fft=n_fft,\n",
+    "#         hop_length=hop_length,\n",
+    "#         n_mels=n_mels\n",
+    "#     )\n",
+    "    \n",
+    "    # Convert to log scale\n",
+    "#     mel_spect_db = librosa.power_to_db(mel_spect, ref=np.max)\n",
+    "    mel_spect_db = torchaudio.transforms.AmplitudeToDB()(mel_spect)\n",
+    "    \n",
+    "#     # Normalize\n",
+    "#     mel_spect_db = (mel_spect_db - mel_spect_db.min()) / (mel_spect_db.max() - mel_spect_db.min())\n",
+    "# #     mel_spect_db = librosa.util.fix_length(mel_spect_db, size=256, axis=1)\n",
+    "#     mel_spect_db = torch.nn.functional.pad(mel_spect_db, (0, max(0, 256 - mel_spect_db.size(-1))), mode=\"constant\", value=0)\n",
+    "    \n",
+    "    # Normalize to the range [0, 255]\n",
+    "    mel_spect_db = (mel_spect_db - mel_spect_db.min()) / (mel_spect_db.max() - mel_spect_db.min())\n",
+    "    mel_spect_db = (mel_spect_db * 255).to(torch.uint8)  # Scale and convert to uint8\n",
+    "    \n",
+    "    mel_spect_db_cpu = mel_spect_db.cpu().numpy()  # Convert once to CPU\n",
+    "    del mel_spect_db, mel_spect  # Free GPU memory explicitly\n",
+    "    torch.cuda.empty_cache()  # Clear cache\n",
+    "    return mel_spect_db_cpu"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 6,
+   "id": "c88590d8",
+   "metadata": {
+    "_cell_guid": "b1abe323-89d5-48c7-a442-06434a69c0e4",
+    "_uuid": "cc056daa-ef3e-4828-9e55-82609b935c10",
+    "collapsed": false,
+    "execution": {
+     "iopub.execute_input": "2024-11-06T19:19:27.686149Z",
+     "iopub.status.busy": "2024-11-06T19:19:27.685776Z",
+     "iopub.status.idle": "2024-11-06T19:19:27.713947Z",
+     "shell.execute_reply": "2024-11-06T19:19:27.712711Z"
+    },
+    "jupyter": {
+     "outputs_hidden": false
+    },
+    "papermill": {
+     "duration": 0.037652,
+     "end_time": "2024-11-06T19:19:27.716910",
+     "exception": false,
+     "start_time": "2024-11-06T19:19:27.679258",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "time: 6.52 ms (started: 2024-11-06 19:19:27 +00:00)\n"
+     ]
+    }
+   ],
+   "source": [
+    "def process_audio_dataset(batch_size=100):\n",
+    "    label_encoder = LabelEncoder()\n",
+    "    all_thaats = []\n",
+    "    for thaat_path in base_path.iterdir():\n",
+    "        if thaat_path.is_dir():\n",
+    "            thaat_name = thaat_path.name.split(\" \")[0]  # Remove \"(thaat)\" suffix\n",
+    "            all_thaats.append(thaat_name)\n",
+    "\n",
+    "    # Fit the encoders\n",
+    "    label_encoder.fit(all_thaats)\n",
+    "    onehot_encoder = OneHotEncoder(sparse_output=False)\n",
+    "    onehot_encoder.fit(label_encoder.transform(all_thaats).reshape(-1, 1))\n",
+    "    n_classes = len(label_encoder.classes_)\n",
+    "\n",
+    "    print(f\"Found {n_classes} thaat classes: {', '.join(label_encoder.classes_)}\")\n",
+    "    print(f\"Total audio files to process: {total_files}\")\n",
+    "    \n",
+    "    with h5py.File(output_file, 'w') as hf:\n",
+    "        spect_dset = hf.create_dataset(\n",
+    "            'spectrograms', \n",
+    "            shape=(0, 256, 256),        # Initial shape\n",
+    "            maxshape=(None, 256, 256),  # Fixed shape with 254 time frames\n",
+    "            dtype='uint8',\n",
+    "            compression='gzip',\n",
+    "            compression_opts=9,\n",
+    "            chunks=(5, 256, 256)        # Optimize chunking for I/O\n",
+    "        )\n",
+    "\n",
+    "        \n",
+    "        label_dset = hf.create_dataset(\n",
+    "            'labels',\n",
+    "            shape=(0, n_classes),\n",
+    "            maxshape=(None, n_classes),\n",
+    "            dtype='float32',\n",
+    "            compression='gzip',\n",
+    "            chunks=(5, n_classes)\n",
+    "        )\n",
+    "        \n",
+    "#         hf.attrs['label_classes'] = label_encoder.classes_\n",
+    "#         hf.attrs['sampling_rate'] = sampling_rate\n",
+    "#         hf.attrs['chunk_duration'] = chunk_duration\n",
+    "        \n",
+    "        current_position = 0\n",
+    "        temp_spects = []\n",
+    "        temp_labels = []\n",
+    "        pbar = tqdm(total=total_files, desc=\"Processing files\")\n",
+    "        \n",
+    "        # Process all thaats\n",
+    "        for thaat_path in base_path.iterdir():\n",
+    "            if not thaat_path.is_dir():\n",
+    "                continue\n",
+    "                \n",
+    "            thaat_name = thaat_path.name.split(\" \")[0]\n",
+    "            print(f\"\\nProcessing thaat: {thaat_name}\")\n",
+    "            \n",
+    "            # Process each raga in the thaat\n",
+    "            for raga_path in thaat_path.iterdir():\n",
+    "                if not raga_path.is_dir():\n",
+    "                    continue\n",
+    "                    \n",
+    "                # Process each audio file in the raga\n",
+    "                for audio_file in raga_path.glob('*'):\n",
+    "                    try:\n",
+    "                        # Load audio file\n",
+    "                        y, _ = librosa.load(str(audio_file), mono=True, sr=sampling_rate)\n",
+    "                        \n",
+    "                        # Process chunks\n",
+    "                        for i in range(0, len(y) - chunk_samples + 1, chunk_samples):\n",
+    "                            chunk = y[i:i + chunk_samples]\n",
+    "                            if len(chunk) == chunk_samples:  # Only process complete chunks\n",
+    "                                # Generate spectrogram\n",
+    "                                spect = generate_spectrogram(chunk)\n",
+    "                                \n",
+    "                                # Encode label\n",
+    "                                label_encoded = label_encoder.transform([thaat_name])[0]\n",
+    "                                label_onehot = onehot_encoder.transform([[label_encoded]])\n",
+    "                                \n",
+    "                                temp_spects.append(spect)\n",
+    "                                temp_labels.append(label_onehot[0])\n",
+    "                                \n",
+    "                                # When batch is full, save to H5 file\n",
+    "                                if len(temp_spects) >= batch_size:\n",
+    "                                    spect_batch = np.array(temp_spects, dtype='uint8')\n",
+    "                                    label_batch = np.array(temp_labels, dtype='uint8')\n",
+    "                                    \n",
+    "                                    # Resize datasets\n",
+    "                                    new_size = current_position + len(spect_batch)\n",
+    "                                    spect_dset.resize((new_size, 256, 256))\n",
+    "                                    label_dset.resize((new_size, n_classes))\n",
+    "                                    \n",
+    "                                    # Save batch\n",
+    "                                    spect_dset[current_position:new_size] = spect_batch\n",
+    "                                    label_dset[current_position:new_size] = label_batch\n",
+    "                                    \n",
+    "                                    # Update position and clear temporary lists\n",
+    "                                    current_position = new_size\n",
+    "                                    temp_spects = []\n",
+    "                                    temp_labels = []\n",
+    "                                    \n",
+    "                                    # Force garbage collection\n",
+    "                                    gc.collect()\n",
+    "                        \n",
+    "                        # Clear memory after processing each file\n",
+    "                        del y\n",
+    "                        gc.collect()\n",
+    "                        \n",
+    "                        # Update progress bar\n",
+    "                        pbar.update(1)\n",
+    "                        \n",
+    "                    except Exception as e:\n",
+    "                        print(f\"\\nError processing file {audio_file}: {str(e)}\")\n",
+    "                        pbar.update(1)\n",
+    "                        continue\n",
+    "            \n",
+    "        # Save any remaining data\n",
+    "        if temp_spects:\n",
+    "            spect_batch = np.array(temp_spects, dtype='uint8')\n",
+    "            label_batch = np.array(temp_labels, dtype='uint8')\n",
+    "            new_size = current_position + len(spect_batch)\n",
+    "            spect_dset.resize((new_size, 256, 256))\n",
+    "            label_dset.resize((new_size, n_classes))\n",
+    "            spect_dset[current_position:new_size] = spect_batch\n",
+    "            label_dset[current_position:new_size] = label_batch\n",
+    "        \n",
+    "        pbar.close()\n",
+    "        print(f\"\\nProcessing complete. Total spectrograms generated: {new_size}\")"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 7,
+   "id": "6e055a29",
+   "metadata": {
+    "_cell_guid": "9de3ed60-96ff-4020-8cc7-30bfb88fc383",
+    "_uuid": "48c40c84-0d54-4e7c-897d-315e98c67cfd",
+    "collapsed": false,
+    "execution": {
+     "iopub.execute_input": "2024-11-06T19:19:27.730152Z",
+     "iopub.status.busy": "2024-11-06T19:19:27.729743Z",
+     "iopub.status.idle": "2024-11-06T20:21:01.893654Z",
+     "shell.execute_reply": "2024-11-06T20:21:01.892269Z"
+    },
+    "jupyter": {
+     "outputs_hidden": false
+    },
+    "papermill": {
+     "duration": 3694.172718,
+     "end_time": "2024-11-06T20:21:01.896172",
+     "exception": false,
+     "start_time": "2024-11-06T19:19:27.723454",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Found 10 thaat classes: Asavari, Bhairav, Bhairavi, Bilaval, Kafi, Kalyan, Khamaj, Marva, Poorvi, Todi\n",
+      "Total audio files to process: 1103\n"
+     ]
+    },
+    {
+     "data": {
+      "application/vnd.jupyter.widget-view+json": {
+       "model_id": "3dbaf5da3b354bbe9381c518b864c556",
+       "version_major": 2,
+       "version_minor": 0
+      },
+      "text/plain": [
+       "Processing files:   0%|          | 0/1103 [00:00<?, ?it/s]"
+      ]
+     },
+     "metadata": {},
+     "output_type": "display_data"
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "\n",
+      "Processing thaat: Kafi\n",
+      "\n",
+      "Processing thaat: Todi\n",
+      "\n",
+      "Processing thaat: Poorvi\n",
+      "\n",
+      "Processing thaat: Asavari\n",
+      "\n",
+      "Processing thaat: Marva\n",
+      "\n",
+      "Processing thaat: Khamaj\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "[src/libmpg123/layer3.c:INT123_do_layer3():1801] error: dequantization failed!\n"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "\n",
+      "Processing thaat: Bhairav\n",
+      "\n",
+      "Processing thaat: Kalyan\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "[src/libmpg123/layer3.c:INT123_do_layer3():1801] error: dequantization failed!\n"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "\n",
+      "Processing thaat: Bhairavi\n",
+      "\n",
+      "Processing thaat: Bilaval\n",
+      "\n",
+      "Processing complete. Total spectrograms generated: 105526\n",
+      "time: 1h 1min 34s (started: 2024-11-06 19:19:27 +00:00)\n"
+     ]
+    }
+   ],
+   "source": [
+    "process_audio_dataset(batch_size=100)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 8,
+   "id": "cab23da4",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2024-11-06T20:21:01.911711Z",
+     "iopub.status.busy": "2024-11-06T20:21:01.910593Z",
+     "iopub.status.idle": "2024-11-06T20:21:01.916821Z",
+     "shell.execute_reply": "2024-11-06T20:21:01.915671Z"
+    },
+    "papermill": {
+     "duration": 0.016286,
+     "end_time": "2024-11-06T20:21:01.919157",
+     "exception": false,
+     "start_time": "2024-11-06T20:21:01.902871",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "time: 657 µs (started: 2024-11-06 20:21:01 +00:00)\n"
+     ]
+    }
+   ],
+   "source": [
+    "# with h5py.File('/kaggle/working/processed_spectrograms.h5', 'r') as hf:\n",
+    "#     # Load spectrograms and labels datasets\n",
+    "#     spectrograms = hf['spectrograms'][:]\n",
+    "#     labels = hf['labels'][:]\n",
+    "# # Check loaded data shapes\n",
+    "# print(\"Spectrograms shape:\", spectrograms.shape)  # Expected: (total_samples, 256, 256)\n",
+    "# print(\"Labels shape:\", labels.shape)              # Expected: (total_samples, n_classes)\n",
+    "\n",
+    "# # Example: Access the first spectrogram and label\n",
+    "# first_spectrogram = spectrograms[0]\n",
+    "# first_label = labels[0]\n",
+    "# print(\"First spectrogram shape:\", first_spectrogram.shape)\n",
+    "# print(\"First label (one-hot):\", first_label)\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 9,
+   "id": "629cbd21",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2024-11-06T20:21:01.934192Z",
+     "iopub.status.busy": "2024-11-06T20:21:01.933515Z",
+     "iopub.status.idle": "2024-11-06T20:21:01.938687Z",
+     "shell.execute_reply": "2024-11-06T20:21:01.937688Z"
+    },
+    "papermill": {
+     "duration": 0.015193,
+     "end_time": "2024-11-06T20:21:01.940915",
+     "exception": false,
+     "start_time": "2024-11-06T20:21:01.925722",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "time: 698 µs (started: 2024-11-06 20:21:01 +00:00)\n"
+     ]
+    }
+   ],
+   "source": [
+    "# import matplotlib.pyplot as plt\n",
+    "\n",
+    "# # Plot the Mel spectrogram\n",
+    "# def plot_mel_spectrogram(mel_spectrogram, sr=16000, hop_length=512, title=\"Mel Spectrogram\"):\n",
+    "#     plt.figure(figsize=(10, 4))\n",
+    "#     librosa.display.specshow(mel_spectrogram, \n",
+    "#                              sr=sr, \n",
+    "#                              hop_length=hop_length, \n",
+    "#                              x_axis='time', \n",
+    "#                              y_axis='mel')\n",
+    "#     plt.colorbar(format='%+2.0f dB')\n",
+    "#     plt.title(title)\n",
+    "#     plt.tight_layout()\n",
+    "#     plt.show()\n",
+    "\n",
+    "# # Example usage with the first spectrogram\n",
+    "# plot_mel_spectrogram(spectrograms[657], sr=sampling_rate, hop_length=512)\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 10,
+   "id": "b47d12cf",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2024-11-06T20:21:01.956016Z",
+     "iopub.status.busy": "2024-11-06T20:21:01.955619Z",
+     "iopub.status.idle": "2024-11-06T20:21:01.960868Z",
+     "shell.execute_reply": "2024-11-06T20:21:01.959777Z"
+    },
+    "papermill": {
+     "duration": 0.015877,
+     "end_time": "2024-11-06T20:21:01.963446",
+     "exception": false,
+     "start_time": "2024-11-06T20:21:01.947569",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "time: 315 µs (started: 2024-11-06 20:21:01 +00:00)\n"
+     ]
+    }
+   ],
+   "source": [
+    "# !zip data.zip /kaggle/tmp/data/processed_spectrograms.h5"
+   ]
+  }
+ ],
+ "metadata": {
+  "kaggle": {
+   "accelerator": "nvidiaTeslaT4",
+   "dataSources": [
+    {
+     "datasetId": 5972439,
+     "sourceId": 9754382,
+     "sourceType": "datasetVersion"
+    }
+   ],
+   "dockerImageVersionId": 30786,
+   "isGpuEnabled": true,
+   "isInternetEnabled": true,
+   "language": "python",
+   "sourceType": "notebook"
+  },
+  "kernelspec": {
+   "display_name": "Python 3",
+   "language": "python",
+   "name": "python3"
+  },
+  "language_info": {
+   "codemirror_mode": {
+    "name": "ipython",
+    "version": 3
+   },
+   "file_extension": ".py",
+   "mimetype": "text/x-python",
+   "name": "python",
+   "nbconvert_exporter": "python",
+   "pygments_lexer": "ipython3",
+   "version": "3.10.14"
+  },
+  "papermill": {
+   "default_parameters": {},
+   "duration": 3735.242326,
+   "end_time": "2024-11-06T20:21:03.896088",
+   "environment_variables": {},
+   "exception": null,
+   "input_path": "__notebook__.ipynb",
+   "output_path": "__notebook__.ipynb",
+   "parameters": {},
+   "start_time": "2024-11-06T19:18:48.653762",
+   "version": "2.6.0"
+  },
+  "widgets": {
+   "application/vnd.jupyter.widget-state+json": {
+    "state": {
+     "3dbaf5da3b354bbe9381c518b864c556": {
+      "model_module": "@jupyter-widgets/controls",
+      "model_module_version": "1.5.0",
+      "model_name": "HBoxModel",
+      "state": {
+       "_dom_classes": [],
+       "_model_module": "@jupyter-widgets/controls",
+       "_model_module_version": "1.5.0",
+       "_model_name": "HBoxModel",
+       "_view_count": null,
+       "_view_module": "@jupyter-widgets/controls",
+       "_view_module_version": "1.5.0",
+       "_view_name": "HBoxView",
+       "box_style": "",
+       "children": [
+        "IPY_MODEL_841b4ef500f54b48901ab7f44cf30e67",
+        "IPY_MODEL_b775ebbd421b4a99952f8c1b82fea31d",
+        "IPY_MODEL_fabe3d0c57ac442b9986cf131198b19e"
+       ],
+       "layout": "IPY_MODEL_3e93d0b0b0f843d3be20dd9bfb76913d"
+      }
+     },
+     "3e93d0b0b0f843d3be20dd9bfb76913d": {
+      "model_module": "@jupyter-widgets/base",
+      "model_module_version": "1.2.0",
+      "model_name": "LayoutModel",
+      "state": {
+       "_model_module": "@jupyter-widgets/base",
+       "_model_module_version": "1.2.0",
+       "_model_name": "LayoutModel",
+       "_view_count": null,
+       "_view_module": "@jupyter-widgets/base",
+       "_view_module_version": "1.2.0",
+       "_view_name": "LayoutView",
+       "align_content": null,
+       "align_items": null,
+       "align_self": null,
+       "border": null,
+       "bottom": null,
+       "display": null,
+       "flex": null,
+       "flex_flow": null,
+       "grid_area": null,
+       "grid_auto_columns": null,
+       "grid_auto_flow": null,
+       "grid_auto_rows": null,
+       "grid_column": null,
+       "grid_gap": null,
+       "grid_row": null,
+       "grid_template_areas": null,
+       "grid_template_columns": null,
+       "grid_template_rows": null,
+       "height": null,
+       "justify_content": null,
+       "justify_items": null,
+       "left": null,
+       "margin": null,
+       "max_height": null,
+       "max_width": null,
+       "min_height": null,
+       "min_width": null,
+       "object_fit": null,
+       "object_position": null,
+       "order": null,
+       "overflow": null,
+       "overflow_x": null,
+       "overflow_y": null,
+       "padding": null,
+       "right": null,
+       "top": null,
+       "visibility": null,
+       "width": null
+      }
+     },
+     "48a9d191c7594af281979449c1205a68": {
+      "model_module": "@jupyter-widgets/controls",
+      "model_module_version": "1.5.0",
+      "model_name": "DescriptionStyleModel",
+      "state": {
+       "_model_module": "@jupyter-widgets/controls",
+       "_model_module_version": "1.5.0",
+       "_model_name": "DescriptionStyleModel",
+       "_view_count": null,
+       "_view_module": "@jupyter-widgets/base",
+       "_view_module_version": "1.2.0",
+       "_view_name": "StyleView",
+       "description_width": ""
+      }
+     },
+     "740d87a424454b5e9dde3c620e8867d1": {
+      "model_module": "@jupyter-widgets/base",
+      "model_module_version": "1.2.0",
+      "model_name": "LayoutModel",
+      "state": {
+       "_model_module": "@jupyter-widgets/base",
+       "_model_module_version": "1.2.0",
+       "_model_name": "LayoutModel",
+       "_view_count": null,
+       "_view_module": "@jupyter-widgets/base",
+       "_view_module_version": "1.2.0",
+       "_view_name": "LayoutView",
+       "align_content": null,
+       "align_items": null,
+       "align_self": null,
+       "border": null,
+       "bottom": null,
+       "display": null,
+       "flex": null,
+       "flex_flow": null,
+       "grid_area": null,
+       "grid_auto_columns": null,
+       "grid_auto_flow": null,
+       "grid_auto_rows": null,
+       "grid_column": null,
+       "grid_gap": null,
+       "grid_row": null,
+       "grid_template_areas": null,
+       "grid_template_columns": null,
+       "grid_template_rows": null,
+       "height": null,
+       "justify_content": null,
+       "justify_items": null,
+       "left": null,
+       "margin": null,
+       "max_height": null,
+       "max_width": null,
+       "min_height": null,
+       "min_width": null,
+       "object_fit": null,
+       "object_position": null,
+       "order": null,
+       "overflow": null,
+       "overflow_x": null,
+       "overflow_y": null,
+       "padding": null,
+       "right": null,
+       "top": null,
+       "visibility": null,
+       "width": null
+      }
+     },
+     "841b4ef500f54b48901ab7f44cf30e67": {
+      "model_module": "@jupyter-widgets/controls",
+      "model_module_version": "1.5.0",
+      "model_name": "HTMLModel",
+      "state": {
+       "_dom_classes": [],
+       "_model_module": "@jupyter-widgets/controls",
+       "_model_module_version": "1.5.0",
+       "_model_name": "HTMLModel",
+       "_view_count": null,
+       "_view_module": "@jupyter-widgets/controls",
+       "_view_module_version": "1.5.0",
+       "_view_name": "HTMLView",
+       "description": "",
+       "description_tooltip": null,
+       "layout": "IPY_MODEL_740d87a424454b5e9dde3c620e8867d1",
+       "placeholder": "​",
+       "style": "IPY_MODEL_cd9dd436f8664166b1bd0d85c6bdca02",
+       "value": "Processing files: 100%"
+      }
+     },
+     "b775ebbd421b4a99952f8c1b82fea31d": {
+      "model_module": "@jupyter-widgets/controls",
+      "model_module_version": "1.5.0",
+      "model_name": "FloatProgressModel",
+      "state": {
+       "_dom_classes": [],
+       "_model_module": "@jupyter-widgets/controls",
+       "_model_module_version": "1.5.0",
+       "_model_name": "FloatProgressModel",
+       "_view_count": null,
+       "_view_module": "@jupyter-widgets/controls",
+       "_view_module_version": "1.5.0",
+       "_view_name": "ProgressView",
+       "bar_style": "success",
+       "description": "",
+       "description_tooltip": null,
+       "layout": "IPY_MODEL_ee1ad350e7ee4287a26c789af2626555",
+       "max": 1103.0,
+       "min": 0.0,
+       "orientation": "horizontal",
+       "style": "IPY_MODEL_f1334094cee04620b97d54e22d82a5b2",
+       "value": 1103.0
+      }
+     },
+     "cd9dd436f8664166b1bd0d85c6bdca02": {
+      "model_module": "@jupyter-widgets/controls",
+      "model_module_version": "1.5.0",
+      "model_name": "DescriptionStyleModel",
+      "state": {
+       "_model_module": "@jupyter-widgets/controls",
+       "_model_module_version": "1.5.0",
+       "_model_name": "DescriptionStyleModel",
+       "_view_count": null,
+       "_view_module": "@jupyter-widgets/base",
+       "_view_module_version": "1.2.0",
+       "_view_name": "StyleView",
+       "description_width": ""
+      }
+     },
+     "ee1ad350e7ee4287a26c789af2626555": {
+      "model_module": "@jupyter-widgets/base",
+      "model_module_version": "1.2.0",
+      "model_name": "LayoutModel",
+      "state": {
+       "_model_module": "@jupyter-widgets/base",
+       "_model_module_version": "1.2.0",
+       "_model_name": "LayoutModel",
+       "_view_count": null,
+       "_view_module": "@jupyter-widgets/base",
+       "_view_module_version": "1.2.0",
+       "_view_name": "LayoutView",
+       "align_content": null,
+       "align_items": null,
+       "align_self": null,
+       "border": null,
+       "bottom": null,
+       "display": null,
+       "flex": null,
+       "flex_flow": null,
+       "grid_area": null,
+       "grid_auto_columns": null,
+       "grid_auto_flow": null,
+       "grid_auto_rows": null,
+       "grid_column": null,
+       "grid_gap": null,
+       "grid_row": null,
+       "grid_template_areas": null,
+       "grid_template_columns": null,
+       "grid_template_rows": null,
+       "height": null,
+       "justify_content": null,
+       "justify_items": null,
+       "left": null,
+       "margin": null,
+       "max_height": null,
+       "max_width": null,
+       "min_height": null,
+       "min_width": null,
+       "object_fit": null,
+       "object_position": null,
+       "order": null,
+       "overflow": null,
+       "overflow_x": null,
+       "overflow_y": null,
+       "padding": null,
+       "right": null,
+       "top": null,
+       "visibility": null,
+       "width": null
+      }
+     },
+     "f1334094cee04620b97d54e22d82a5b2": {
+      "model_module": "@jupyter-widgets/controls",
+      "model_module_version": "1.5.0",
+      "model_name": "ProgressStyleModel",
+      "state": {
+       "_model_module": "@jupyter-widgets/controls",
+       "_model_module_version": "1.5.0",
+       "_model_name": "ProgressStyleModel",
+       "_view_count": null,
+       "_view_module": "@jupyter-widgets/base",
+       "_view_module_version": "1.2.0",
+       "_view_name": "StyleView",
+       "bar_color": null,
+       "description_width": ""
+      }
+     },
+     "fabe3d0c57ac442b9986cf131198b19e": {
+      "model_module": "@jupyter-widgets/controls",
+      "model_module_version": "1.5.0",
+      "model_name": "HTMLModel",
+      "state": {
+       "_dom_classes": [],
+       "_model_module": "@jupyter-widgets/controls",
+       "_model_module_version": "1.5.0",
+       "_model_name": "HTMLModel",
+       "_view_count": null,
+       "_view_module": "@jupyter-widgets/controls",
+       "_view_module_version": "1.5.0",
+       "_view_name": "HTMLView",
+       "description": "",
+       "description_tooltip": null,
+       "layout": "IPY_MODEL_fd69d391e3424eec82aaed21631a52a4",
+       "placeholder": "​",
+       "style": "IPY_MODEL_48a9d191c7594af281979449c1205a68",
+       "value": " 1103/1103 [1:01:34&lt;00:00,  5.24s/it]"
+      }
+     },
+     "fd69d391e3424eec82aaed21631a52a4": {
+      "model_module": "@jupyter-widgets/base",
+      "model_module_version": "1.2.0",
+      "model_name": "LayoutModel",
+      "state": {
+       "_model_module": "@jupyter-widgets/base",
+       "_model_module_version": "1.2.0",
+       "_model_name": "LayoutModel",
+       "_view_count": null,
+       "_view_module": "@jupyter-widgets/base",
+       "_view_module_version": "1.2.0",
+       "_view_name": "LayoutView",
+       "align_content": null,
+       "align_items": null,
+       "align_self": null,
+       "border": null,
+       "bottom": null,
+       "display": null,
+       "flex": null,
+       "flex_flow": null,
+       "grid_area": null,
+       "grid_auto_columns": null,
+       "grid_auto_flow": null,
+       "grid_auto_rows": null,
+       "grid_column": null,
+       "grid_gap": null,
+       "grid_row": null,
+       "grid_template_areas": null,
+       "grid_template_columns": null,
+       "grid_template_rows": null,
+       "height": null,
+       "justify_content": null,
+       "justify_items": null,
+       "left": null,
+       "margin": null,
+       "max_height": null,
+       "max_width": null,
+       "min_height": null,
+       "min_width": null,
+       "object_fit": null,
+       "object_position": null,
+       "order": null,
+       "overflow": null,
+       "overflow_x": null,
+       "overflow_y": null,
+       "padding": null,
+       "right": null,
+       "top": null,
+       "visibility": null,
+       "width": null
+      }
+     }
+    },
+    "version_major": 2,
+    "version_minor": 0
+   }
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 5
+}
